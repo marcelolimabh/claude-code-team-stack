@@ -69,8 +69,9 @@ scripts/
 cd ~/dev/<repo>
 bash /path/to/claude-code-team-stack/scripts/setup-claude-stack.sh
 ```
-Prerequisites: Claude Code, git, Python 3.9+, Node LTS (TS projects). macOS also needs Homebrew;
-Linux needs JDK 21+ for Java projects (jdtls requires it to run, your project can target 17).
+Prerequisites: Claude Code, git, Python 3.9+, Node LTS (TS projects). For Java projects, macOS uses
+Homebrew to install jdtls and falls back to a direct download (needs JDK 21+) when Homebrew is missing or
+fails, as on Intel Macs; Linux needs JDK 21+ (jdtls requires it to run, your project can target 17).
 
 ### Windows
 **Recommended: run Claude Code inside WSL2.** On native Windows the LSP plugins currently fail to
@@ -117,6 +118,8 @@ Items 2 and 3 send code to external services: get approval first if your code is
 - **Project `enabledPlugins` may not prompt teammates to install** plugins from the official marketplace
   ([#41669](https://claudeissues.com/issue/41669-project-level-enabledplugins-should-auto-install-or-prompt-to-install-plugins-fr)).
   Workaround: the setup scripts install whatever `settings.json` lists.
+- **`claude plugin install --scope project` may rewrite `.claude/settings.json`** with the keys in a
+  different order. The content is the same; discard the change with `git checkout .claude/settings.json`.
 
 ## References
 

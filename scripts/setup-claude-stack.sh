@@ -72,37 +72,56 @@ PLUGINS="$(read_settings plugins)"
 MARKETPLACES="$(read_settings marketplaces)"
 
 if [[ "$PLATFORM" == "mac" ]] && ! has brew; then
-  fail "Homebrew not found. Install it from https://brew.sh and run again."
+  warn "Homebrew not found (https://brew.sh). jdtls will use the direct download instead."
 fi
 
 # ---------- 2. LSP binaries ----------
+# Downloads jdtls from Eclipse into ~/.local/share/jdtls. Returns 1 (without
+# aborting the setup) when it cannot be installed.
+download_jdtls() {
+  if ! has java; then
+    warn "Java not found. jdtls needs JDK 21+ to run. Install one and run again."
+    return 1
+  fi
+  JAVA_MAJOR="$(java -version 2>&1 | awk -F'"' '/version/ {split($2,v,"."); print (v[1]=="1"?v[2]:v[1])}')"
+  if [[ "${JAVA_MAJOR:-0}" -lt 21 ]]; then
+    warn "Java ${JAVA_MAJOR:-?} detected; jdtls needs 21+ to RUN (your project can still target 17)."
+    warn "Install a JDK 21 (e.g. sudo apt install openjdk-21-jdk, or brew install openjdk@21) and run again."
+    return 1
+  fi
+  info "Downloading jdtls (Eclipse JDT Language Server)..."
+  mkdir -p "$JDTLS_HOME" "$LOCAL_BIN"
+  TMP="$(mktemp -d)"
+  if ! curl -fsSL -o "$TMP/jdtls.tar.gz" https://download.eclipse.org/jdtls/snapshots/jdt-language-server-latest.tar.gz \
+     || ! tar -xzf "$TMP/jdtls.tar.gz" -C "$JDTLS_HOME"; then
+    rm -rf "$TMP"
+    warn "Could not download or extract jdtls."
+    return 1
+  fi
+  rm -rf "$TMP"
+  chmod +x "$JDTLS_HOME/bin/jdtls"
+  ln -sf "$JDTLS_HOME/bin/jdtls" "$LOCAL_BIN/jdtls"
+  case ":$PATH:" in *":$LOCAL_BIN:"*) ;; *)
+    warn "Add this to your ~/.bashrc or ~/.zshrc:  export PATH=\"\$HOME/.local/bin:\$PATH\"";;
+  esac
+}
+
 install_jdtls() {
   if has jdtls; then ok "jdtls already installed ($(command -v jdtls))"; return; fi
 
   if [[ "$PLATFORM" == "mac" ]]; then
     info "Installing jdtls with Homebrew (pulls the OpenJDK it needs)..."
-    brew install jdtls
-  else
-    has java || fail "Java not found. jdtls needs JDK 21+ to run (e.g. sudo apt install openjdk-21-jdk)."
-    JAVA_MAJOR="$(java -version 2>&1 | awk -F'"' '/version/ {split($2,v,"."); print (v[1]=="1"?v[2]:v[1])}')"
-    if [[ "${JAVA_MAJOR:-0}" -lt 21 ]]; then
-      warn "Java $JAVA_MAJOR detected; jdtls needs 21+ to RUN (your project can still target 17)."
-      warn "Install a JDK 21 (e.g. sudo apt install openjdk-21-jdk) and run again."
-      return
-    fi
-    info "Downloading jdtls (Eclipse JDT Language Server)..."
-    mkdir -p "$JDTLS_HOME" "$LOCAL_BIN"
-    TMP="$(mktemp -d)"
-    curl -fsSL -o "$TMP/jdtls.tar.gz" https://download.eclipse.org/jdtls/snapshots/jdt-language-server-latest.tar.gz
-    tar -xzf "$TMP/jdtls.tar.gz" -C "$JDTLS_HOME"
-    rm -rf "$TMP"
-    chmod +x "$JDTLS_HOME/bin/jdtls"
-    ln -sf "$JDTLS_HOME/bin/jdtls" "$LOCAL_BIN/jdtls"
-    case ":$PATH:" in *":$LOCAL_BIN:"*) ;; *)
-      warn "Add this to your ~/.bashrc or ~/.zshrc:  export PATH=\"\$HOME/.local/bin:\$PATH\"";;
-    esac
+    if has brew && brew install jdtls; then ok "jdtls installed"; return; fi
+    # Homebrew has no prebuilt packages for some Macs (e.g. Intel) and the
+    # source build can fail: fall back to the Eclipse download.
+    warn "Homebrew could not install jdtls; trying the direct download instead."
   fi
-  ok "jdtls installed"
+
+  if download_jdtls; then
+    ok "jdtls installed"
+  else
+    warn "jdtls was NOT installed: the jdtls-lsp plugin will not work until it is. Continuing with the plugins."
+  fi
 }
 
 install_ts_lsp() {

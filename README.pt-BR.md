@@ -69,8 +69,9 @@ scripts/
 cd ~/dev/<repo>
 bash /caminho/para/claude-code-team-stack/scripts/setup-claude-stack.sh
 ```
-Pré-requisitos: Claude Code, git, Python 3.9+, Node LTS (projetos TS). No macOS, Homebrew;
-no Linux, JDK 21+ para projetos Java (o jdtls precisa dele para rodar; o projeto pode continuar em 17).
+Pré-requisitos: Claude Code, git, Python 3.9+, Node LTS (projetos TS). Em projetos Java, o macOS
+usa o Homebrew para instalar o jdtls e recorre ao download direto (exige JDK 21+) quando o Homebrew não
+existe ou falha, como em Macs Intel; o Linux precisa de JDK 21+ (o jdtls precisa dele para rodar; o projeto pode continuar em 17).
 
 ### Windows
 **Recomendado: rodar o Claude Code dentro do WSL2.** No Windows nativo os plugins de LSP ainda
@@ -117,6 +118,8 @@ Os itens 2 e 3 enviam código para serviços externos: peça aprovação antes s
 - **`enabledPlugins` no projeto pode não pedir instalação** aos colegas para plugins do marketplace oficial
   ([#41669](https://claudeissues.com/issue/41669-project-level-enabledplugins-should-auto-install-or-prompt-to-install-plugins-fr)).
   Contorno: os scripts de setup instalam o que o `settings.json` listar.
+- **O `claude plugin install --scope project` pode reescrever o `.claude/settings.json`** com as chaves em
+  outra ordem. O conteúdo é o mesmo; descarte a mudança com `git checkout .claude/settings.json`.
 
 ## Referências
 
